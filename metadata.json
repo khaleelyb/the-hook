@@ -1,0 +1,8 @@
+{
+  "name": "The Hook",
+  "description": "A high-energy social voting application where communities battle it out on style, tech, and lifestyle questions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
