@@ -15,6 +15,9 @@ export interface Profile {
   followers_count: number;
   following_count: number;
   is_verified: boolean;
+  bio?: string;
+  website?: string;
+  created_at?: string;
 }
 
 export interface HookOption {
@@ -48,4 +51,13 @@ export interface Comment {
   likes_count: number;
   created_at: string;
   user?: Profile;
+}
+
+export interface UserSettings {
+  push_notifications: boolean;
+  email_alerts: boolean;
+  show_vote_counts: boolean;
+  private_profile: boolean;
+  theme: 'light' | 'dark' | 'system';
+  language: string;
 }
