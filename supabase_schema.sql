@@ -56,11 +56,14 @@ CREATE TABLE comments (
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public profiles are viewable by everyone" ON profiles FOR SELECT USING (true);
+CREATE POLICY "Users can create their own profile" ON profiles FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 
 ALTER TABLE hooks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Hooks are viewable by everyone" ON hooks FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can create hooks" ON hooks FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can create hooks" ON hooks FOR INSERT WITH CHECK (auth.uid() = creator_id AND auth.role() = 'authenticated');
+CREATE POLICY "Users can update their own hooks" ON hooks FOR UPDATE USING (auth.uid() = creator_id);
+CREATE POLICY "Users can delete their own hooks" ON hooks FOR DELETE USING (auth.uid() = creator_id);
 
 ALTER TABLE hook_options ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Options are viewable by everyone" ON hook_options FOR SELECT USING (true);
@@ -68,11 +71,11 @@ CREATE POLICY "Authenticated users can create options" ON hook_options FOR INSER
 
 ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Votes are viewable by everyone" ON votes FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can vote" ON votes FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can vote" ON votes FOR INSERT WITH CHECK (auth.uid() = user_id AND auth.role() = 'authenticated');
 
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Comments are viewable by everyone" ON comments FOR SELECT USING (true);
-CREATE POLICY "Authenticated users can comment" ON comments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can comment" ON comments FOR INSERT WITH CHECK (auth.uid() = user_id AND auth.role() = 'authenticated');
 
 -- Function to handle voting and increment counts
 CREATE OR REPLACE FUNCTION handle_vote()
