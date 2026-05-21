@@ -4,7 +4,7 @@ import { Bolt, Mail, Lock, User, Loader2 } from 'lucide-react';
 import { signIn, signUp } from '../lib/supabase';
 import { cn } from '../types';
 
-export const Page: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
+export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
   const [mode, setMode] = React.useState<'login' | 'signup'>('login');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -101,7 +101,7 @@ export const Page: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="w-full py-4 bg-primary text-on-primary font-display text-lg rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+            className="w-full py-4 bg-primary text-on-primary font-display text-lg rounded-xl shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : mode === 'login' ? 'Log In' : 'Create Account'}
           </button>
