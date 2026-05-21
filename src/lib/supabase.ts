@@ -8,7 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase URL or Anon Key is missing. Check your .env file.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    headers: {
+      Accept: 'application/json',
+    },
+  },
+});
 
 // ─── AUTH ──────────────────────────────────────────────────────────
 export async function signUp(email: string, password: string, username: string) {
