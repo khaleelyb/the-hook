@@ -20,13 +20,42 @@ export async function signUp(email: string, password: string, username: string) 
   if (error) throw error;
 
   if (data.user) {
-    await supabase.from('profiles').upsert({
-      id: data.user.id,
-      username,
-      full_name: username,
-      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-    });
+    // Robustly handle profile creation with validation and error recovery
+    try {
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking existing profile:', fetchError);
+        throw new Error(`Failed to check existing profile: ${fetchError.message}`);
+      }
+
+      // If profile doesn't exist, insert it; otherwise, skip (already exists)
+      if (!existingProfile) {
+        const { error: insertError } = await supabase.from('profiles').insert({
+          id: data.user.id,
+          username,
+          full_name: username,
+          avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        });
+
+        if (insertError) {
+          console.error('Error creating profile:', insertError);
+          // If profile creation fails, attempt to clean up the auth user
+          // Note: This is optional depending on your requirements
+          throw new Error(`Failed to create user profile: ${insertError.message}`);
+        }
+      }
+    } catch (profileError: any) {
+      console.error('Profile creation failed during signup:', profileError);
+      // Re-throw with context so the caller can handle gracefully
+      throw new Error(`Signup completed but profile setup failed: ${profileError.message}`);
+    }
   }
+
   return data;
 }
 
@@ -65,6 +94,39 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
     .select()
     .single();
   if (error) throw error;
+  return data;
+}
+
+// ─── PROFILE GUARD ─────────────────────────────────────────────────
+/**
+ * Ensures a user profile exists. If not, creates a basic one.
+ * This guards against hook creation when a user profile hasn't been initialized.
+ */
+export async function ensureProfileExists(userId: string, username?: string): Promise<Profile> {
+  const profile = await getProfile(userId);
+  
+  if (profile) {
+    return profile;
+  }
+
+  // Profile doesn't exist, create a basic one
+  console.warn(`Profile missing for user ${userId}. Creating basic profile.`);
+  
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert({
+      id: userId,
+      username: username || `user_${userId.slice(0, 8)}`,
+      full_name: username || `user_${userId.slice(0, 8)}`,
+      avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to ensure profile exists: ${error.message}`);
+  }
+
   return data;
 }
 
@@ -137,6 +199,9 @@ export async function createHook(
   expiresInHours: number,
   options: { label: string; image_url?: string }[]
 ): Promise<Hook> {
+  // Profile guard: ensure user profile exists before creating a hook
+  await ensureProfileExists(creatorId);
+
   const expiresAt = new Date(Date.now() + expiresInHours * 3600000).toISOString();
 
   const { data: hook, error } = await supabase
