@@ -26,7 +26,6 @@ export async function signUp(email: string, password: string, username: string) 
   if (error) throw error;
 
   if (data.user) {
-    // Robustly handle profile creation with validation and error recovery
     try {
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
@@ -34,12 +33,8 @@ export async function signUp(email: string, password: string, username: string) 
         .eq('id', data.user.id)
         .maybeSingle();
 
-      if (fetchError) {
-        console.error('Error checking existing profile:', fetchError);
-        throw new Error(`Failed to check existing profile: ${fetchError.message}`);
-      }
+      if (fetchError) throw new Error(`Failed to check existing profile: ${fetchError.message}`);
 
-      // If profile doesn't exist, insert it; otherwise, skip (already exists)
       if (!existingProfile) {
         const { error: insertError } = await supabase.from('profiles').insert({
           id: data.user.id,
@@ -47,17 +42,9 @@ export async function signUp(email: string, password: string, username: string) 
           full_name: username,
           avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
         });
-
-        if (insertError) {
-          console.error('Error creating profile:', insertError);
-          // If profile creation fails, attempt to clean up the auth user
-          // Note: This is optional depending on your requirements
-          throw new Error(`Failed to create user profile: ${insertError.message}`);
-        }
+        if (insertError) throw new Error(`Failed to create user profile: ${insertError.message}`);
       }
     } catch (profileError: any) {
-      console.error('Profile creation failed during signup:', profileError);
-      // Re-throw with context so the caller can handle gracefully
       throw new Error(`Signup completed but profile setup failed: ${profileError.message}`);
     }
   }
@@ -103,21 +90,10 @@ export async function updateProfile(userId: string, updates: Partial<Profile>) {
   return data;
 }
 
-// ─── PROFILE GUARD ─────────────────────────────────────────────────
-/**
- * Ensures a user profile exists. If not, creates a basic one.
- * This guards against hook creation when a user profile hasn't been initialized.
- */
 export async function ensureProfileExists(userId: string, username?: string): Promise<Profile> {
   const profile = await getProfile(userId);
-  
-  if (profile) {
-    return profile;
-  }
+  if (profile) return profile;
 
-  // Profile doesn't exist, create a basic one
-  console.warn(`Profile missing for user ${userId}. Creating basic profile.`);
-  
   const { data, error } = await supabase
     .from('profiles')
     .insert({
@@ -129,22 +105,77 @@ export async function ensureProfileExists(userId: string, username?: string): Pr
     .select()
     .single();
 
-  if (error) {
-    throw new Error(`Failed to ensure profile exists: ${error.message}`);
-  }
-
+  if (error) throw new Error(`Failed to ensure profile exists: ${error.message}`);
   return data;
+}
+
+// ─── FOLLOWS ───────────────────────────────────────────────────────
+
+/** Follow a user. Returns true if newly followed. */
+export async function followUser(followerId: string, followingId: string): Promise<void> {
+  const { error } = await supabase
+    .from('follows')
+    .insert({ follower_id: followerId, following_id: followingId });
+  if (error) throw error;
+}
+
+/** Unfollow a user. */
+export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
+  const { error } = await supabase
+    .from('follows')
+    .delete()
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId);
+  if (error) throw error;
+}
+
+/** Check if currentUser follows targetUser. */
+export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+  return !!data;
+}
+
+/** Get all users that userId follows (following list). */
+export async function getFollowing(userId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('following:profiles!follows_following_id_fkey(*)')
+    .eq('follower_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => row.following);
+}
+
+/** Get all followers of userId. */
+export async function getFollowers(userId: string): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('follower:profiles!follows_follower_id_fkey(*)')
+    .eq('following_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => row.follower);
+}
+
+/** Batch-check which profileIds the currentUser follows (for feed cards). */
+export async function getFollowingIds(userId: string): Promise<Set<string>> {
+  const { data } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId);
+  return new Set((data ?? []).map((r: any) => r.following_id));
 }
 
 // ─── HOOKS ─────────────────────────────────────────────────────────
 export async function fetchHooks(category?: string, userId?: string): Promise<Hook[]> {
   let query = supabase
     .from('hooks')
-    .select(`
-      *,
-      creator:profiles(*),
-      options:hook_options(*)
-    `)
+    .select(`*, creator:profiles(*), options:hook_options(*)`)
     .order('created_at', { ascending: false })
     .limit(20);
 
@@ -155,7 +186,6 @@ export async function fetchHooks(category?: string, userId?: string): Promise<Ho
   const { data, error } = await query;
   if (error) throw error;
 
-  // If logged in, check which ones the user voted on
   if (userId && data) {
     const hookIds = data.map((h: any) => h.id);
     const { data: votes } = await supabase
@@ -205,9 +235,7 @@ export async function createHook(
   expiresInHours: number,
   options: { label: string; image_url?: string }[]
 ): Promise<Hook> {
-  // Profile guard: ensure user profile exists before creating a hook
   await ensureProfileExists(creatorId);
-
   const expiresAt = new Date(Date.now() + expiresInHours * 3600000).toISOString();
 
   const { data: hook, error } = await supabase
@@ -253,7 +281,7 @@ export async function postComment(userId: string, hookId: string, content: strin
   return data;
 }
 
-// ─── USER HOOKS (profile page) ─────────────────────────────────────
+// ─── USER HOOKS ────────────────────────────────────────────────────
 export async function fetchUserHooks(userId: string): Promise<Hook[]> {
   const { data, error } = await supabase
     .from('hooks')
@@ -264,7 +292,7 @@ export async function fetchUserHooks(userId: string): Promise<Hook[]> {
   return data ?? [];
 }
 
-// ─── SETTINGS (stored in profiles as jsonb or separate table) ──────
+// ─── SETTINGS ──────────────────────────────────────────────────────
 export async function getUserSettings(userId: string): Promise<UserSettings> {
   const { data } = await supabase
     .from('profiles')
