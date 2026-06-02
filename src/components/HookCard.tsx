@@ -3,13 +3,21 @@ import { motion } from 'motion/react';
 import { Share2, Clock, CheckCircle2, MessageCircle, Heart } from 'lucide-react';
 import { Hook, cn } from '../types';
 import { formatDistanceToNow } from 'date-fns';
+import { FollowButton } from './FollowButton';
 
 interface HookCardProps {
   hook: Hook;
   onVote: (optionId: string) => void;
+  currentUserId?: string;
+  initialFollowing?: boolean;
 }
 
-export const HookCard: React.FC<HookCardProps> = ({ hook, onVote }) => {
+export const HookCard: React.FC<HookCardProps> = ({
+  hook,
+  onVote,
+  currentUserId,
+  initialFollowing = false,
+}) => {
   const isExpired = new Date(hook.expires_at) < new Date();
   const msLeft = new Date(hook.expires_at).getTime() - Date.now();
   const hLeft = Math.max(0, Math.floor(msLeft / 3600000));
@@ -32,6 +40,14 @@ export const HookCard: React.FC<HookCardProps> = ({ hook, onVote }) => {
               {hook.created_at ? formatDistanceToNow(new Date(hook.created_at)) + ' ago' : ''}
             </p>
           </div>
+          {currentUserId && hook.creator?.id && (
+            <FollowButton
+              currentUserId={currentUserId}
+              targetUserId={hook.creator.id}
+              initialFollowing={initialFollowing}
+              size="sm"
+            />
+          )}
         </div>
 
         {!isExpired && (
@@ -139,12 +155,9 @@ export const HookCard: React.FC<HookCardProps> = ({ hook, onVote }) => {
 
       {/* Footer */}
       <div className="flex justify-between items-center pt-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-on-surface-variant">
-            {hook.total_votes.toLocaleString()} votes
-          </span>
-        </div>
-
+        <span className="text-xs font-bold text-on-surface-variant">
+          {hook.total_votes.toLocaleString()} votes
+        </span>
         <div className="flex items-center gap-4">
           <button
             onClick={(e) => e.stopPropagation()}
