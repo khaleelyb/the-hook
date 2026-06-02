@@ -3,27 +3,51 @@ import { motion } from 'motion/react';
 import { Settings, BadgeCheck, BarChart3, Vote, Star, Trophy, Timer, CheckCircle2, Loader2 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { Profile, Hook, cn } from '../types';
-import { getProfile, fetchUserHooks } from '../lib/supabase';
+import { getProfile, fetchUserHooks, isFollowing } from '../lib/supabase';
+import { FollowButton } from '../components/FollowButton';
+import { FollowList } from '../components/FollowList';
 
 interface ProfilePageProps {
   onSettings: () => void;
   session: Session;
+  /** When set, shows another user's profile instead of the logged-in user's */
+  viewUserId?: string;
+  onBack?: () => void;
 }
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({
+  onSettings,
+  session,
+  viewUserId,
+  onBack,
+}) => {
+  const targetId = viewUserId ?? session.user.id;
+  const isOwnProfile = targetId === session.user.id;
+
   const [profile, setProfile] = React.useState<Profile | null>(null);
   const [hooks, setHooks] = React.useState<Hook[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [currentlyFollowing, setCurrentlyFollowing] = React.useState(false);
+  const [followListMode, setFollowListMode] = React.useState<'followers' | 'following' | null>(null);
 
   React.useEffect(() => {
-    const userId = session.user.id;
-    Promise.all([getProfile(userId), fetchUserHooks(userId)])
-      .then(([p, h]) => {
-        setProfile(p);
-        setHooks(h);
-      })
-      .finally(() => setLoading(false));
-  }, [session]);
+    const load = async () => {
+      setLoading(true);
+      const [p, h] = await Promise.all([
+        getProfile(targetId),
+        fetchUserHooks(targetId),
+      ]);
+      setProfile(p);
+      setHooks(h);
+
+      if (!isOwnProfile) {
+        const f = await isFollowing(session.user.id, targetId);
+        setCurrentlyFollowing(f);
+      }
+      setLoading(false);
+    };
+    load();
+  }, [targetId, session, isOwnProfile]);
 
   if (loading) {
     return (
@@ -51,10 +75,20 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session })
     <div className="space-y-8 pb-12">
       {/* Header */}
       <div className="flex justify-between items-center -mx-4 px-4 h-16 bg-surface sticky top-0 z-50">
-        <h1 className="font-display text-2xl text-primary font-black">Profile</h1>
-        <button onClick={onSettings} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
-          <Settings className="w-6 h-6" />
-        </button>
+        {onBack ? (
+          <button onClick={onBack} className="p-2 text-primary">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        ) : (
+          <h1 className="font-display text-2xl text-primary font-black">Profile</h1>
+        )}
+        {isOwnProfile && (
+          <button onClick={onSettings} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
+            <Settings className="w-6 h-6" />
+          </button>
+        )}
       </div>
 
       {/* User Info */}
@@ -77,26 +111,56 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session })
         <div>
           <h2 className="font-display text-2xl text-on-surface font-bold">{profile.full_name}</h2>
           <p className="text-sm font-semibold text-on-surface-variant">@{profile.username}</p>
+          {profile.bio && (
+            <p className="text-sm text-on-surface-variant mt-2 max-w-xs">{profile.bio}</p>
+          )}
         </div>
 
+        {/* Follower / Following counts — tappable */}
         <div className="flex gap-12 justify-center w-full">
-          <div>
+          <button
+            onClick={() => setFollowListMode('followers')}
+            className="flex flex-col items-center active:scale-95 transition-transform"
+          >
             <p className="font-display text-xl text-on-surface font-bold">
               {profile.followers_count >= 1000
                 ? `${(profile.followers_count / 1000).toFixed(1)}k`
                 : profile.followers_count}
             </p>
             <p className="text-xs font-medium text-on-surface-variant">Followers</p>
-          </div>
-          <div>
+          </button>
+          <button
+            onClick={() => setFollowListMode('following')}
+            className="flex flex-col items-center active:scale-95 transition-transform"
+          >
             <p className="font-display text-xl text-on-surface font-bold">{profile.following_count}</p>
             <p className="text-xs font-medium text-on-surface-variant">Following</p>
-          </div>
+          </button>
         </div>
 
-        <button className="w-full py-3 bg-surface-container-high text-primary font-bold rounded-full shadow-sm hover:opacity-80 transition-all active:scale-95">
-          Edit Profile
-        </button>
+        {/* Follow or Edit button */}
+        {isOwnProfile ? (
+          <button className="w-full py-3 bg-surface-container-high text-primary font-bold rounded-full shadow-sm hover:opacity-80 transition-all active:scale-95">
+            Edit Profile
+          </button>
+        ) : (
+          <FollowButton
+            currentUserId={session.user.id}
+            targetUserId={targetId}
+            initialFollowing={currentlyFollowing}
+            onFollowChange={(f) => {
+              setCurrentlyFollowing(f);
+              setProfile((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      followers_count: prev.followers_count + (f ? 1 : -1),
+                    }
+                  : prev
+              );
+            }}
+          />
+        )}
       </section>
 
       {/* Stats */}
@@ -123,25 +187,27 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session })
         </div>
       </section>
 
-      {/* My Hooks grid */}
+      {/* Hooks grid */}
       <section>
         <div className="flex border-b border-outline-variant mb-4">
           <button className="flex-1 py-3 text-center text-sm font-bold border-b-2 border-primary text-primary">
-            My Hooks
+            {isOwnProfile ? 'My Hooks' : `${profile.username}'s Hooks`}
           </button>
-          <button className="flex-1 py-3 text-center text-sm font-bold text-on-surface-variant hover:text-on-surface transition-colors">
-            Saved
-          </button>
+          {isOwnProfile && (
+            <button className="flex-1 py-3 text-center text-sm font-bold text-on-surface-variant hover:text-on-surface transition-colors">
+              Saved
+            </button>
+          )}
         </div>
 
         {hooks.length === 0 && (
-          <p className="text-center text-on-surface-variant text-sm py-8">No hooks yet. Post your first!</p>
+          <p className="text-center text-on-surface-variant text-sm py-8">No hooks yet.</p>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           {hooks.map((hook, index) => {
-            const isExpired = new Date(hook.expires_at) < new Date();
-            const isLive = !isExpired;
+            const isExpiredHook = new Date(hook.expires_at) < new Date();
+            const isLive = !isExpiredHook;
             const msLeft = new Date(hook.expires_at).getTime() - Date.now();
             const hLeft = Math.floor(msLeft / 3600000);
             const mLeft = Math.floor((msLeft % 3600000) / 60000);
@@ -192,6 +258,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session })
           })}
         </div>
       </section>
+
+      {/* Follow list bottom sheet */}
+      {followListMode && (
+        <FollowList
+          userId={targetId}
+          currentUserId={session.user.id}
+          mode={followListMode}
+          onClose={() => setFollowListMode(null)}
+        />
+      )}
     </div>
   );
 };
