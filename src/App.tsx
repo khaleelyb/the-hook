@@ -10,7 +10,7 @@ import { SettingsPage } from './pages/Settings';
 import { DetailView } from './pages/DetailView';
 import { CreatePage } from './pages/Create';
 import { AuthPage } from './pages/Auth';
-import { supabase, fetchHooks } from './lib/supabase';
+import { supabase, fetchHooks, getFollowingIds } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 export default function App() {
@@ -20,9 +20,11 @@ export default function App() {
   const [category, setCategory] = React.useState<Category>('For You');
   const [showSettings, setShowSettings] = React.useState(false);
   const [selectedHookId, setSelectedHookId] = React.useState<string | null>(null);
+  const [viewProfileId, setViewProfileId] = React.useState<string | null>(null);
   const [hooks, setHooks] = React.useState<Hook[]>([]);
   const [loadingHooks, setLoadingHooks] = React.useState(false);
   const [hookError, setHookError] = React.useState<string | null>(null);
+  const [followingIds, setFollowingIds] = React.useState<Set<string>>(new Set());
 
   const categories: Category[] = ['For You', 'Trending', 'Style', 'Tech', 'Lifestyle'];
 
@@ -38,7 +40,13 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Fetch hooks when tab or category changes
+  // Load following IDs whenever session changes
+  React.useEffect(() => {
+    if (!session?.user?.id) return;
+    getFollowingIds(session.user.id).then(setFollowingIds);
+  }, [session?.user?.id]);
+
+  // Fetch hooks
   React.useEffect(() => {
     if (activeTab !== 'feed') return;
     setLoadingHooks(true);
@@ -51,7 +59,6 @@ export default function App() {
 
   const handleVote = async (hookId: string, optionId: string) => {
     if (!session) return;
-    // Optimistic update
     setHooks((prev) =>
       prev.map((h) =>
         h.id === hookId
@@ -71,7 +78,6 @@ export default function App() {
       const { castVote } = await import('./lib/supabase');
       await castVote(session.user.id, hookId, optionId);
     } catch {
-      // Revert on failure
       fetchHooks(category, session.user.id).then(setHooks);
     }
   };
@@ -89,10 +95,24 @@ export default function App() {
   }
 
   const selectedHook = hooks.find((h) => h.id === selectedHookId);
+  const showingDetail = !!selectedHook;
+  const showingProfile = !!viewProfileId;
+  const showingOverlay = showSettings || showingDetail || showingProfile;
 
   const renderPage = () => {
     if (showSettings) {
       return <SettingsPage onBack={() => setShowSettings(false)} session={session} />;
+    }
+
+    if (viewProfileId) {
+      return (
+        <ProfilePage
+          onSettings={() => setShowSettings(true)}
+          session={session}
+          viewUserId={viewProfileId}
+          onBack={() => setViewProfileId(null)}
+        />
+      );
     }
 
     if (selectedHook) {
@@ -151,7 +171,12 @@ export default function App() {
                   transition={{ delay: index * 0.05 }}
                   onClick={() => setSelectedHookId(hook.id)}
                 >
-                  <HookCard hook={hook} onVote={(optionId) => handleVote(hook.id, optionId)} />
+                  <HookCard
+                    hook={hook}
+                    onVote={(optionId) => handleVote(hook.id, optionId)}
+                    currentUserId={session.user.id}
+                    initialFollowing={!!hook.creator?.id && followingIds.has(hook.creator.id)}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -170,7 +195,12 @@ export default function App() {
         );
 
       case 'profile':
-        return <ProfilePage onSettings={() => setShowSettings(true)} session={session} />;
+        return (
+          <ProfilePage
+            onSettings={() => setShowSettings(true)}
+            session={session}
+          />
+        );
 
       default:
         return (
@@ -185,12 +215,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background pb-32">
-      {!showSettings && !selectedHookId && <TopBar />}
-      <main className={cn('px-4 max-w-lg mx-auto', !showSettings && !selectedHookId ? 'pt-20' : 'pt-4')}>
+      {!showingOverlay && <TopBar />}
+      <main className={cn('px-4 max-w-lg mx-auto', !showingOverlay ? 'pt-20' : 'pt-4')}>
         {renderPage()}
       </main>
 
-      {activeTab === 'feed' && !showSettings && !selectedHookId && (
+      {activeTab === 'feed' && !showingOverlay && (
         <motion.button
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -202,7 +232,7 @@ export default function App() {
         </motion.button>
       )}
 
-      {!showSettings && !selectedHookId && <NavBar activeTab={activeTab} onTabChange={setActiveTab} />}
+      {!showingOverlay && <NavBar activeTab={activeTab} onTabChange={setActiveTab} />}
     </div>
   );
 }
