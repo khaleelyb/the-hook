@@ -164,8 +164,8 @@ const HookGridItem: React.FC<{ hook: Hook; index: number; onClick?: () => void }
       {hook.options?.[0]?.image_url ? (
         <img src={hook.options[0].image_url} alt="" className="w-full h-full object-cover" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center p-2" style={{ background: 'linear-gradient(135deg, #2d1b69, #1c0a2e)' }}>
-          <p className="text-[10px] font-semibold text-violet-300 text-center line-clamp-3 leading-tight">{hook.question}</p>
+        <div className="w-full h-full flex items-center justify-center p-2" style={{ background: 'linear-gradient(135deg, #ede9fe, #f3e8ff)' }}>
+          <p className="text-[10px] font-semibold text-violet-700 text-center line-clamp-3 leading-tight">{hook.question}</p>
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
@@ -246,7 +246,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
     <div className="pb-12 min-h-screen">
       {/* Header bar */}
       <div className="flex justify-between items-center h-14 sticky top-0 z-50 -mx-4 px-4"
-        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
+        style={{ background: 'linear-gradient(to bottom, #f5f5f7 70%, transparent)' }}>
         {onBack ? (
           <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
             <ArrowLeft className="w-5 h-5" />
