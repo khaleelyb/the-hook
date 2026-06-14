@@ -67,7 +67,7 @@ const AppearancePanel: React.FC<{
               {icon}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={cn('text-sm font-semibold', selected === id ? 'text-on-surface' : 'text-on-surface')}>{label}</p>
+              <p className="text-sm font-semibold text-on-surface">{label}</p>
               <p className="text-xs text-on-surface-variant mt-0.5">{desc}</p>
             </div>
             {selected === id && (
@@ -81,19 +81,15 @@ const AppearancePanel: React.FC<{
         <div className="mt-6">
           <p className="text-[10px] font-bold text-violet-400 uppercase tracking-widest px-1 mb-3">Display</p>
           <div className="bg-surface-container rounded-2xl border border-outline-variant/20 overflow-hidden">
-            {[
-              { label: 'Show vote counts', key: 'show_vote_counts' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center">
-                    <Eye className="w-4 h-4 text-on-surface-variant" />
-                  </div>
-                  <span className="text-sm font-medium text-on-surface">{item.label}</span>
+            <div className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center">
+                  <Eye className="w-4 h-4 text-on-surface-variant" />
                 </div>
-                <div className="w-2 h-2 rounded-full bg-violet-500" />
+                <span className="text-sm font-medium text-on-surface">Show vote counts</span>
               </div>
-            ))}
+              <div className="w-2 h-2 rounded-full bg-violet-500" />
+            </div>
           </div>
         </div>
       </div>
@@ -202,7 +198,6 @@ const EditProfilePanel: React.FC<{
             <p className="text-xs text-on-surface-variant">Tap to change photo</p>
           </div>
 
-          {/* Fields */}
           {[
             { label: 'Display name', value: fullName, set: setFullName, placeholder: 'Your name', max: 50, type: 'text' },
             { label: 'Username', value: username, set: setUsername, placeholder: 'username', max: 30, type: 'text' },
@@ -273,13 +268,12 @@ const ChangePasswordPanel: React.FC<{
 
   const handleSave = async () => {
     setError(null);
-    if (!next || !confirm) { setError('Please fill in all fields.'); return; }
+    if (!current || !next || !confirm) { setError('Please fill in all fields.'); return; }
     if (next.length < 8) { setError('Password must be at least 8 characters.'); return; }
     if (next !== confirm) { setError('Passwords do not match.'); return; }
 
     setSaving(true);
     try {
-      // Re-authenticate with current password first
       const { supabase } = await import('../lib/supabase');
       const { error: signInErr } = await supabase.auth.signInWithPassword({
         email: session.user.email!,
@@ -311,7 +305,6 @@ const ChangePasswordPanel: React.FC<{
       </div>
 
       <div className="px-4 pt-6 space-y-5 pb-12">
-        {/* Icon */}
         <div className="flex flex-col items-center gap-3 pb-2">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #c026d3)' }}>
@@ -329,7 +322,6 @@ const ChangePasswordPanel: React.FC<{
           </div>
         )}
 
-        {/* Current password */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Current password</label>
           <div className="relative">
@@ -347,7 +339,6 @@ const ChangePasswordPanel: React.FC<{
           </div>
         </div>
 
-        {/* New password */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">New password</label>
           <div className="relative">
@@ -363,7 +354,6 @@ const ChangePasswordPanel: React.FC<{
               {showNext ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
-          {/* Strength bar */}
           {next.length > 0 && (
             <div className="space-y-1">
               <div className="flex gap-1">
@@ -381,7 +371,6 @@ const ChangePasswordPanel: React.FC<{
           )}
         </div>
 
-        {/* Confirm */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Confirm new password</label>
           <div className="relative">
@@ -462,7 +451,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
   const displayName = meta?.full_name || meta?.username || session.user.email?.split('@')[0] || 'User';
   const username = meta?.username || session.user.email?.split('@')[0];
 
-  // Sub-panel routing
   if (panel === 'appearance') {
     return <AppearancePanel current={settings?.theme ?? 'dark'} onSave={handleThemeSave} onBack={() => setPanel(null)} />;
   }
@@ -477,15 +465,15 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
     {
       title: 'Account',
       items: [
-        { label: 'Edit Profile',     icon: User,    action: () => setPanel('profile') },
-        { label: 'Change Password',  icon: Lock,    action: () => setPanel('password') },
-        { label: 'Email',            icon: Mail,    meta: session.user.email, action: null },
+        { label: 'Edit Profile',    icon: User,  action: () => setPanel('profile') as void },
+        { label: 'Change Password', icon: Lock,  action: () => setPanel('password') as void },
+        { label: 'Email',           icon: Mail,  meta: session.user.email, action: null },
       ],
     },
     {
       title: 'Preferences',
       items: [
-        { label: 'Appearance', icon: Palette, meta: settings?.theme ?? '—', action: () => setPanel('appearance') },
+        { label: 'Appearance', icon: Palette, meta: settings?.theme ?? '—', action: () => setPanel('appearance') as void },
         { label: 'Language',   icon: Globe,   meta: settings?.language ?? 'English', action: null },
         { label: 'Privacy',    icon: Shield,  meta: null, action: null },
       ],
@@ -493,15 +481,14 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
     {
       title: 'Support',
       items: [
-        { label: 'Help center',      icon: HelpCircle,    danger: false, action: null },
-        { label: 'Report an issue',  icon: AlertTriangle, danger: true,  action: null },
+        { label: 'Help center',     icon: HelpCircle,    danger: false, action: null },
+        { label: 'Report an issue', icon: AlertTriangle, danger: true,  action: null },
       ],
     },
   ];
 
   return (
     <div className="min-h-screen pb-12">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 h-14 sticky top-0 z-50"
         style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
         <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
@@ -514,7 +501,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
       </div>
 
       <div className="px-4 pt-2 space-y-6">
-        {/* Profile card */}
         <button
           onClick={() => setPanel('profile')}
           className="w-full bg-surface-container rounded-2xl p-4 flex items-center gap-4 border border-outline-variant/20 text-left"
@@ -578,7 +564,6 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
               </div>
             ))}
 
-            {/* Sign out */}
             <button
               onClick={handleSignOut}
               disabled={signingOut}
@@ -595,6 +580,3 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
     </div>
   );
 };
-
-// Missing import fix
-const { LogOut } = await import('lucide-react').catch(() => ({ LogOut: () => null }));
