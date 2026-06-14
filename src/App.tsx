@@ -10,7 +10,7 @@ import { SettingsPage } from './pages/Settings';
 import { DetailView } from './pages/DetailView';
 import { CreatePage } from './pages/Create';
 import { AuthPage } from './pages/Auth';
-import { supabase, fetchHooks, getFollowingIds } from './lib/supabase';
+import { supabase, fetchHooks, fetchHookById, getFollowingIds } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 
 const categoryConfig: { cat: Category; icon: React.ReactNode; label: string }[] = [
@@ -28,7 +28,7 @@ export default function App() {
   const [activeTab, setActiveTab] = React.useState('feed');
   const [category, setCategory] = React.useState<Category>('For You');
   const [showSettings, setShowSettings] = React.useState(false);
-  const [selectedHookId, setSelectedHookId] = React.useState<string | null>(null);
+  const [selectedHook, setSelectedHook] = React.useState<Hook | null>(null);
   const [viewProfileId, setViewProfileId] = React.useState<string | null>(null);
   const [hooks, setHooks] = React.useState<Hook[]>([]);
   const [loadingHooks, setLoadingHooks] = React.useState(false);
@@ -60,10 +60,22 @@ export default function App() {
       .finally(() => setLoadingHooks(false));
   }, [activeTab, category, session]);
 
+  // Navigate to a hook by ID — fetches it if not already in feed list
+  const openHookById = async (hookId: string) => {
+    const existing = hooks.find((h) => h.id === hookId);
+    if (existing) {
+      setSelectedHook(existing);
+      return;
+    }
+    if (!session?.user?.id) return;
+    const fetched = await fetchHookById(hookId, session.user.id);
+    if (fetched) setSelectedHook(fetched);
+  };
+
   const handleVote = async (hookId: string, optionId: string) => {
     if (!session) return;
-    setHooks((prev) =>
-      prev.map((h) =>
+    const update = (list: Hook[]) =>
+      list.map((h) =>
         h.id === hookId
           ? {
               ...h,
@@ -75,8 +87,10 @@ export default function App() {
               ),
             }
           : h
-      )
-    );
+      );
+    setHooks(update);
+    // Also update selectedHook if open
+    setSelectedHook((prev) => prev && prev.id === hookId ? (update([prev])[0] ?? prev) : prev);
     try {
       const { castVote } = await import('./lib/supabase');
       await castVote(session.user.id, hookId, optionId);
@@ -103,7 +117,6 @@ export default function App() {
 
   if (!session) return <AuthPage onAuth={() => {}} />;
 
-  const selectedHook = hooks.find((h) => h.id === selectedHookId);
   const showingOverlay = showSettings || !!selectedHook || !!viewProfileId;
 
   const renderPage = () => {
@@ -117,12 +130,13 @@ export default function App() {
           session={session}
           viewUserId={viewProfileId}
           onBack={() => setViewProfileId(null)}
+          onHookClick={openHookById}
         />
       );
     }
     if (selectedHook) {
       return (
-        <DetailView hook={selectedHook} onBack={() => setSelectedHookId(null)} session={session} />
+        <DetailView hook={selectedHook} onBack={() => setSelectedHook(null)} session={session} />
       );
     }
 
@@ -182,7 +196,7 @@ export default function App() {
                   </div>
                   <p className="text-on-surface font-semibold text-lg">Nothing here yet</p>
                   <p className="text-on-surface-variant text-sm mt-2 leading-relaxed">
-                    Follow people to see their hooks here. Discover creators in the For You feed.
+                    Follow people to see their hooks here.
                   </p>
                   <motion.button
                     whileTap={{ scale: 0.97 }}
@@ -209,7 +223,7 @@ export default function App() {
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04 }}
-                  onClick={() => setSelectedHookId(hook.id)}
+                  onClick={() => setSelectedHook(hook)}
                 >
                   <HookCard
                     hook={hook}
@@ -237,7 +251,11 @@ export default function App() {
 
       case 'profile':
         return (
-          <ProfilePage onSettings={() => setShowSettings(true)} session={session} />
+          <ProfilePage
+            onSettings={() => setShowSettings(true)}
+            session={session}
+            onHookClick={openHookById}
+          />
         );
 
       default:
