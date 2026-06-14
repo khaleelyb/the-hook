@@ -4,12 +4,14 @@ import { Share2, Clock, CheckCircle2, MessageCircle, Heart, Bookmark, MoreHorizo
 import { Hook, cn } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { FollowButton } from './FollowButton';
+import { saveHook, unsaveHook } from '../lib/supabase';
 
 interface HookCardProps {
   hook: Hook;
   onVote: (optionId: string) => void;
   currentUserId?: string;
   initialFollowing?: boolean;
+  onSaveToggle?: (saved: boolean) => void;
 }
 
 export const HookCard: React.FC<HookCardProps> = ({
@@ -17,16 +19,42 @@ export const HookCard: React.FC<HookCardProps> = ({
   onVote,
   currentUserId,
   initialFollowing = false,
+  onSaveToggle,
 }) => {
   const [liked, setLiked] = React.useState(false);
   const [likeCount, setLikeCount] = React.useState(Math.floor(Math.random() * 980) + 20);
-  const [saved, setSaved] = React.useState(false);
+  const [saved, setSaved] = React.useState(hook.is_saved ?? false);
+  const [savingInProgress, setSavingInProgress] = React.useState(false);
+
+  // Sync when hook.is_saved changes (e.g. after feed refresh)
+  React.useEffect(() => {
+    setSaved(hook.is_saved ?? false);
+  }, [hook.is_saved]);
 
   const isExpired = new Date(hook.expires_at) < new Date();
   const msLeft = new Date(hook.expires_at).getTime() - Date.now();
   const hLeft = Math.max(0, Math.floor(msLeft / 3600000));
   const mLeft = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
   const isUrgent = msLeft < 3600000 * 2;
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentUserId || savingInProgress) return;
+    setSavingInProgress(true);
+    const next = !saved;
+    setSaved(next);
+    onSaveToggle?.(next);
+    try {
+      if (next) await saveHook(currentUserId, hook.id);
+      else await unsaveHook(currentUserId, hook.id);
+    } catch {
+      // Revert on error
+      setSaved(!next);
+      onSaveToggle?.(!next);
+    } finally {
+      setSavingInProgress(false);
+    }
+  };
 
   return (
     <article className="rounded-2xl overflow-hidden bg-surface-container-lowest border border-outline-variant/30 mb-4">
@@ -129,10 +157,8 @@ export const HookCard: React.FC<HookCardProps> = ({
                   </div>
                 )}
 
-                {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
 
-                {/* Option label & result */}
                 <div className="absolute bottom-0 left-0 right-0 p-3">
                   <div className="flex items-end justify-between">
                     <div>
@@ -163,7 +189,6 @@ export const HookCard: React.FC<HookCardProps> = ({
                   )}
                 </div>
 
-                {/* Voted glow border */}
                 {isVoted && (
                   <div className="absolute inset-0 border-2 border-white/60 rounded-none pointer-events-none" />
                 )}
@@ -259,13 +284,17 @@ export const HookCard: React.FC<HookCardProps> = ({
             <span className="text-xs font-semibold">{Math.floor(Math.random() * 80) + 5}</span>
           </motion.button>
 
-          {/* Save */}
+          {/* Save — real */}
           <motion.button
             whileTap={{ scale: 0.88 }}
-            onClick={(e) => { e.stopPropagation(); setSaved(s => !s); }}
+            onClick={handleSave}
             className="px-3 py-2 rounded-xl text-on-surface-variant"
           >
-            <Bookmark className={cn('w-5 h-5 transition-all', saved ? 'text-violet-400 fill-violet-400' : '')} />
+            <Bookmark className={cn(
+              'w-5 h-5 transition-all',
+              saved ? 'text-violet-400 fill-violet-400' : '',
+              savingInProgress ? 'opacity-50' : ''
+            )} />
           </motion.button>
 
           {/* Share */}
