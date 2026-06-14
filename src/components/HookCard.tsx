@@ -26,7 +26,6 @@ export const HookCard: React.FC<HookCardProps> = ({
   const [saved, setSaved] = React.useState(hook.is_saved ?? false);
   const [savingInProgress, setSavingInProgress] = React.useState(false);
 
-  // Sync when hook.is_saved changes (e.g. after feed refresh)
   React.useEffect(() => {
     setSaved(hook.is_saved ?? false);
   }, [hook.is_saved]);
@@ -48,7 +47,6 @@ export const HookCard: React.FC<HookCardProps> = ({
       if (next) await saveHook(currentUserId, hook.id);
       else await unsaveHook(currentUserId, hook.id);
     } catch {
-      // Revert on error
       setSaved(!next);
       onSaveToggle?.(!next);
     } finally {
@@ -57,22 +55,21 @@ export const HookCard: React.FC<HookCardProps> = ({
   };
 
   return (
-    <article className="rounded-2xl overflow-hidden bg-surface-container-lowest border border-outline-variant/30 mb-4">
+    <article className="rounded-2xl overflow-hidden bg-white border border-outline-variant/40 mb-4 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center gap-3">
-          {/* Avatar with gradient ring */}
           <div className="relative flex-shrink-0">
             <div className="w-10 h-10 rounded-full p-[2px]"
               style={{ background: 'linear-gradient(135deg, #7c3aed, #f43f5e)' }}>
               <img
                 src={hook.creator?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${hook.creator?.username}`}
                 alt=""
-                className="w-full h-full rounded-full object-cover border-2 border-background"
+                className="w-full h-full rounded-full object-cover border-2 border-white"
               />
             </div>
             {!isExpired && isUrgent && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-secondary rounded-full border-2 border-background relative live-dot" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-secondary rounded-full border-2 border-white relative live-dot" />
             )}
           </div>
 
@@ -96,12 +93,11 @@ export const HookCard: React.FC<HookCardProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Timer badge */}
           {!isExpired ? (
             <span className={cn(
               'flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide',
               isUrgent
-                ? 'bg-secondary/15 text-secondary border border-secondary/30'
+                ? 'bg-rose-50 text-secondary border border-rose-200'
                 : 'bg-surface-container text-on-surface-variant'
             )}>
               <Clock className="w-3 h-3" />
@@ -131,7 +127,7 @@ export const HookCard: React.FC<HookCardProps> = ({
               ? Math.round((option.vote_count / hook.total_votes) * 100)
               : 0;
             const isVoted = hook.user_voted_option_id === option.id;
-            const colors = ['from-violet-600 to-purple-700', 'from-rose-600 to-pink-700'];
+            const colors = ['from-violet-600 to-purple-700', 'from-rose-500 to-pink-600'];
 
             return (
               <motion.div
@@ -190,7 +186,7 @@ export const HookCard: React.FC<HookCardProps> = ({
                 </div>
 
                 {isVoted && (
-                  <div className="absolute inset-0 border-2 border-white/60 rounded-none pointer-events-none" />
+                  <div className="absolute inset-0 border-2 border-white/60 pointer-events-none" />
                 )}
               </motion.div>
             );
@@ -212,15 +208,15 @@ export const HookCard: React.FC<HookCardProps> = ({
                 className={cn(
                   'w-full relative overflow-hidden rounded-xl border transition-all text-left p-4',
                   isVoted
-                    ? 'border-violet-500/60 bg-violet-500/10'
+                    ? 'border-primary/50 bg-primary-container'
                     : hook.has_voted
-                    ? 'border-outline-variant/20 bg-surface-container opacity-70'
-                    : 'border-outline-variant/30 bg-surface-container hover:border-violet-500/40 hover:bg-surface-container-high'
+                    ? 'border-outline-variant/30 bg-surface-container opacity-70'
+                    : 'border-outline-variant/40 bg-surface-container-low hover:border-primary/40 hover:bg-primary-container/30'
                 )}
               >
                 {hook.has_voted && (
                   <div
-                    className={cn('absolute inset-0 opacity-10 rounded-xl', isVoted ? 'bg-violet-500' : 'bg-surface-container-high')}
+                    className={cn('absolute inset-0 opacity-15 rounded-xl', isVoted ? 'bg-primary' : 'bg-surface-container')}
                     style={{ width: `${pct}%` }}
                   />
                 )}
@@ -228,20 +224,20 @@ export const HookCard: React.FC<HookCardProps> = ({
                   <div className="flex items-center gap-3">
                     <span className={cn(
                       'w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0',
-                      isVoted ? 'bg-violet-500 text-white' : 'bg-surface-container-high text-on-surface-variant'
+                      isVoted ? 'bg-primary text-white' : 'bg-surface-container-high text-on-surface-variant'
                     )}>
                       {i === 0 ? 'A' : 'B'}
                     </span>
-                    <span className={cn('text-sm font-semibold', isVoted ? 'text-violet-300' : 'text-on-surface')}>
+                    <span className={cn('text-sm font-semibold', isVoted ? 'text-primary' : 'text-on-surface')}>
                       {option.label}
                     </span>
                   </div>
                   {hook.has_voted && (
                     <div className="flex items-center gap-2">
-                      <span className={cn('font-display font-bold text-sm', isVoted ? 'text-violet-400' : 'text-on-surface-variant')}>
+                      <span className={cn('font-display font-bold text-sm', isVoted ? 'text-primary' : 'text-on-surface-variant')}>
                         {pct}%
                       </span>
-                      {isVoted && <CheckCircle2 className="w-4 h-4 text-violet-400 fill-violet-400/20" />}
+                      {isVoted && <CheckCircle2 className="w-4 h-4 text-primary fill-primary/20" />}
                     </div>
                   )}
                 </div>
@@ -258,7 +254,6 @@ export const HookCard: React.FC<HookCardProps> = ({
         </span>
 
         <div className="flex items-center gap-1">
-          {/* Like */}
           <motion.button
             whileTap={{ scale: 0.8 }}
             onClick={(e) => {
@@ -274,7 +269,6 @@ export const HookCard: React.FC<HookCardProps> = ({
             </span>
           </motion.button>
 
-          {/* Comment */}
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={(e) => e.stopPropagation()}
@@ -284,7 +278,6 @@ export const HookCard: React.FC<HookCardProps> = ({
             <span className="text-xs font-semibold">{Math.floor(Math.random() * 80) + 5}</span>
           </motion.button>
 
-          {/* Save — real */}
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={handleSave}
@@ -292,12 +285,11 @@ export const HookCard: React.FC<HookCardProps> = ({
           >
             <Bookmark className={cn(
               'w-5 h-5 transition-all',
-              saved ? 'text-violet-400 fill-violet-400' : '',
+              saved ? 'text-primary fill-primary' : '',
               savingInProgress ? 'opacity-50' : ''
             )} />
           </motion.button>
 
-          {/* Share */}
           <motion.button
             whileTap={{ scale: 0.88 }}
             onClick={(e) => e.stopPropagation()}
