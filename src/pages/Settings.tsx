@@ -33,7 +33,7 @@ const AppearancePanel: React.FC<{
   return (
     <div className="min-h-screen">
       <div className="flex items-center justify-between px-4 h-14 sticky top-0 z-50"
-        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
+        style={{ background: 'linear-gradient(to bottom, #f5f5f7 70%, transparent)' }}>
         <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -156,7 +156,7 @@ const EditProfilePanel: React.FC<{
   return (
     <div className="min-h-screen">
       <div className="flex items-center justify-between px-4 h-14 sticky top-0 z-50"
-        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
+        style={{ background: 'linear-gradient(to bottom, #f5f5f7 70%, transparent)' }}>
         <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -296,7 +296,7 @@ const ChangePasswordPanel: React.FC<{
   return (
     <div className="min-h-screen">
       <div className="flex items-center justify-between px-4 h-14 sticky top-0 z-50"
-        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
+        style={{ background: 'linear-gradient(to bottom, #f5f5f7 70%, transparent)' }}>
         <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -490,7 +490,7 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, session }) =
   return (
     <div className="min-h-screen pb-12">
       <div className="flex items-center justify-between px-4 h-14 sticky top-0 z-50"
-        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
+        style={{ background: 'linear-gradient(to bottom, #f5f5f7 70%, transparent)' }}>
         <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
           <ArrowLeft className="w-5 h-5" />
         </button>
