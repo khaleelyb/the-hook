@@ -17,8 +17,8 @@ const tabs = [
 
 export const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 pb-safe"
-      style={{ background: 'linear-gradient(to top, #0a0a0b 70%, transparent)' }}>
+    <nav className="fixed bottom-0 left-0 w-full z-50 pb-safe border-t border-outline-variant/40"
+      style={{ background: 'linear-gradient(to top, #f5f5f7 70%, transparent)' }}>
       <div className="flex justify-around items-center px-2 py-3 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -39,9 +39,8 @@ export const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
                     ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600'
                     : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 opacity-80'
                 )}>
-                  {/* TikTok-style create button dual border */}
-                  <span className="absolute -left-0.5 top-0 bottom-0 w-2 rounded-l-lg bg-cyan-400 opacity-70" style={{ width: '5px' }} />
-                  <span className="absolute -right-0.5 top-0 bottom-0 w-2 rounded-r-lg bg-rose-500 opacity-70" style={{ width: '5px' }} />
+                  <span className="absolute -left-0.5 top-0 bottom-0 rounded-l-lg bg-cyan-400 opacity-70" style={{ width: '5px' }} />
+                  <span className="absolute -right-0.5 top-0 bottom-0 rounded-r-lg bg-rose-500 opacity-70" style={{ width: '5px' }} />
                   <Icon className="w-5 h-5 text-white relative z-10" strokeWidth={2} />
                 </div>
               </motion.button>
@@ -59,10 +58,10 @@ export const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
                 <Icon
                   className={cn(
                     'w-6 h-6 transition-all duration-200',
-                    isActive ? 'text-white' : 'text-on-surface-variant'
+                    isActive ? 'text-primary' : 'text-on-surface-variant'
                   )}
                   strokeWidth={isActive ? 2.5 : 1.8}
-                  style={isActive && tab.id !== 'create' ? { filter: 'drop-shadow(0 0 8px rgba(139, 92, 246, 0.8))' } : {}}
+                  style={isActive ? { filter: 'drop-shadow(0 0 6px rgba(109, 40, 217, 0.5))' } : {}}
                 />
                 {tab.id === 'activity' && (
                   <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-secondary rounded-full" />
@@ -70,7 +69,7 @@ export const NavBar: React.FC<NavBarProps> = ({ activeTab, onTabChange }) => {
               </div>
               <span className={cn(
                 'text-[10px] font-semibold tracking-wide transition-colors',
-                isActive ? 'text-white' : 'text-on-surface-variant'
+                isActive ? 'text-primary' : 'text-on-surface-variant'
               )}>
                 {tab.label}
               </span>
