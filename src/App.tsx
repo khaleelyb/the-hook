@@ -4,7 +4,7 @@ import { TopBar } from './components/TopBar';
 import { NavBar } from './components/NavBar';
 import { HookCard } from './components/HookCard';
 import { Hook, Category, cn } from './types';
-import { Plus, Heart, Loader2 } from 'lucide-react';
+import { Loader2, TrendingUp, Sparkles, Shirt, Cpu, Coffee } from 'lucide-react';
 import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/Settings';
 import { DetailView } from './pages/DetailView';
@@ -12,6 +12,14 @@ import { CreatePage } from './pages/Create';
 import { AuthPage } from './pages/Auth';
 import { supabase, fetchHooks, getFollowingIds } from './lib/supabase';
 import type { Session } from '@supabase/supabase-js';
+
+const categoryConfig: { cat: Category; icon: React.ReactNode; label: string }[] = [
+  { cat: 'For You',   icon: <Sparkles className="w-3.5 h-3.5" />,    label: 'For You' },
+  { cat: 'Trending',  icon: <TrendingUp className="w-3.5 h-3.5" />,  label: 'Trending' },
+  { cat: 'Style',     icon: <Shirt className="w-3.5 h-3.5" />,       label: 'Style' },
+  { cat: 'Tech',      icon: <Cpu className="w-3.5 h-3.5" />,         label: 'Tech' },
+  { cat: 'Lifestyle', icon: <Coffee className="w-3.5 h-3.5" />,      label: 'Life' },
+];
 
 export default function App() {
   const [session, setSession] = React.useState<Session | null>(null);
@@ -26,34 +34,28 @@ export default function App() {
   const [hookError, setHookError] = React.useState<string | null>(null);
   const [followingIds, setFollowingIds] = React.useState<Set<string>>(new Set());
 
-  const categories: Category[] = ['For You', 'Trending', 'Style', 'Tech', 'Lifestyle'];
-
-  // Auth state
+  // Auth
   React.useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoadingSession(false);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => {
-      setSession(s);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, s) => setSession(s));
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Load following IDs whenever session changes
   React.useEffect(() => {
     if (!session?.user?.id) return;
     getFollowingIds(session.user.id).then(setFollowingIds);
   }, [session?.user?.id]);
 
-  // Fetch hooks
   React.useEffect(() => {
     if (activeTab !== 'feed') return;
     setLoadingHooks(true);
     setHookError(null);
     fetchHooks(category, session?.user?.id)
       .then(setHooks)
-      .catch((err) => setHookError(err.message ?? 'Failed to load hooks'))
+      .catch((err) => setHookError(err.message ?? 'Failed to load'))
       .finally(() => setLoadingHooks(false));
   }, [activeTab, category, session]);
 
@@ -85,25 +87,22 @@ export default function App() {
   if (loadingSession) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center animate-pulse">
+          <Loader2 className="w-5 h-5 text-white animate-spin" />
+        </div>
       </div>
     );
   }
 
-  if (!session) {
-    return <AuthPage onAuth={() => {}} />;
-  }
+  if (!session) return <AuthPage onAuth={() => {}} />;
 
   const selectedHook = hooks.find((h) => h.id === selectedHookId);
-  const showingDetail = !!selectedHook;
-  const showingProfile = !!viewProfileId;
-  const showingOverlay = showSettings || showingDetail || showingProfile;
+  const showingOverlay = showSettings || !!selectedHook || !!viewProfileId;
 
   const renderPage = () => {
     if (showSettings) {
       return <SettingsPage onBack={() => setShowSettings(false)} session={session} />;
     }
-
     if (viewProfileId) {
       return (
         <ProfilePage
@@ -114,51 +113,61 @@ export default function App() {
         />
       );
     }
-
     if (selectedHook) {
       return (
-        <DetailView
-          hook={selectedHook}
-          onBack={() => setSelectedHookId(null)}
-          session={session}
-        />
+        <DetailView hook={selectedHook} onBack={() => setSelectedHookId(null)} session={session} />
       );
     }
 
     switch (activeTab) {
       case 'feed':
         return (
-          <div className="space-y-6">
-            <div className="flex gap-2 overflow-x-auto hide-scrollbar py-2 sticky top-[72px] bg-background/90 backdrop-blur-md z-40 -mx-4 px-4">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={cn(
-                    'px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all',
-                    category === cat
-                      ? 'bg-primary text-white shadow-lg shadow-primary/20'
-                      : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'
-                  )}
-                >
-                  {cat}
-                </button>
-              ))}
+          <div>
+            {/* Category pills — sticky under topbar */}
+            <div className="sticky top-14 z-40 -mx-4 px-4 py-2.5"
+              style={{ background: 'linear-gradient(to bottom, #0a0a0b 80%, transparent)' }}>
+              <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+                {categoryConfig.map(({ cat, icon, label }) => (
+                  <motion.button
+                    key={cat}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setCategory(cat)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0',
+                      category === cat
+                        ? 'text-white'
+                        : 'bg-surface-container text-on-surface-variant'
+                    )}
+                    style={category === cat ? {
+                      background: 'linear-gradient(135deg, #7c3aed, #c026d3)',
+                      boxShadow: '0 2px 12px rgba(124, 58, 237, 0.35)'
+                    } : {}}
+                  >
+                    {icon}
+                    {label}
+                  </motion.button>
+                ))}
+              </div>
             </div>
 
             {loadingHooks && (
-              <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <div className="flex flex-col items-center py-16 gap-3">
+                <Loader2 className="w-7 h-7 text-violet-500 animate-spin" />
+                <p className="text-xs text-on-surface-variant">Loading hooks…</p>
               </div>
             )}
 
             {hookError && (
-              <div className="text-center py-12 text-error text-sm font-semibold">{hookError}</div>
+              <div className="text-center py-12">
+                <p className="text-rose-400 text-sm">{hookError}</p>
+              </div>
             )}
 
             {!loadingHooks && !hookError && hooks.length === 0 && (
-              <div className="text-center py-16 text-on-surface-variant text-sm font-semibold">
-                No hooks here yet. Be the first to post!
+              <div className="text-center py-20">
+                <div className="text-4xl mb-3">⚡</div>
+                <p className="text-on-surface font-semibold">No hooks yet</p>
+                <p className="text-on-surface-variant text-sm mt-1">Be the first to post one</p>
               </div>
             )}
 
@@ -166,9 +175,9 @@ export default function App() {
               {hooks.map((hook, index) => (
                 <motion.div
                   key={hook.id}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
+                  transition={{ delay: index * 0.04 }}
                   onClick={() => setSelectedHookId(hook.id)}
                 >
                   <HookCard
@@ -196,18 +205,19 @@ export default function App() {
 
       case 'profile':
         return (
-          <ProfilePage
-            onSettings={() => setShowSettings(true)}
-            session={session}
-          />
+          <ProfilePage onSettings={() => setShowSettings(true)} session={session} />
         );
 
       default:
         return (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-            <Heart className="w-12 h-12 text-error mb-4" />
-            <h2 className="text-xl font-bold mb-1">Activity Feed</h2>
-            <p className="text-on-surface-variant text-sm">Stay tuned for the latest votes and comments!</p>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center">
+              <span className="text-3xl">🔔</span>
+            </div>
+            <div>
+              <h2 className="font-display text-lg font-bold text-on-surface">Activity</h2>
+              <p className="text-on-surface-variant text-sm mt-1">Your notifications will appear here</p>
+            </div>
           </div>
         );
     }
@@ -216,22 +226,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-background pb-32">
       {!showingOverlay && <TopBar />}
-      <main className={cn('px-4 max-w-lg mx-auto', !showingOverlay ? 'pt-20' : 'pt-4')}>
+      <main className={cn('px-4 max-w-lg mx-auto', !showingOverlay ? 'pt-14' : 'pt-0')}>
         {renderPage()}
       </main>
-
-      {activeTab === 'feed' && !showingOverlay && (
-        <motion.button
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          whileTap={{ scale: 0.9 }}
-          onClick={() => setActiveTab('create')}
-          className="fixed right-6 bottom-24 w-14 h-14 bg-primary text-on-primary rounded-full shadow-xl shadow-primary/20 flex items-center justify-center z-40"
-        >
-          <Plus className="w-8 h-8" />
-        </motion.button>
-      )}
-
       {!showingOverlay && <NavBar activeTab={activeTab} onTabChange={setActiveTab} />}
     </div>
   );
