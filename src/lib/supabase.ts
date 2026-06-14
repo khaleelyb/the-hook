@@ -111,7 +111,6 @@ export async function ensureProfileExists(userId: string, username?: string): Pr
 
 // ─── FOLLOWS ───────────────────────────────────────────────────────
 
-/** Follow a user. Returns true if newly followed. */
 export async function followUser(followerId: string, followingId: string): Promise<void> {
   const { error } = await supabase
     .from('follows')
@@ -119,7 +118,6 @@ export async function followUser(followerId: string, followingId: string): Promi
   if (error) throw error;
 }
 
-/** Unfollow a user. */
 export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
   const { error } = await supabase
     .from('follows')
@@ -129,7 +127,6 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
   if (error) throw error;
 }
 
-/** Check if currentUser follows targetUser. */
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
   const { data } = await supabase
     .from('follows')
@@ -140,7 +137,6 @@ export async function isFollowing(followerId: string, followingId: string): Prom
   return !!data;
 }
 
-/** Get all users that userId follows (following list). */
 export async function getFollowing(userId: string): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('follows')
@@ -151,7 +147,6 @@ export async function getFollowing(userId: string): Promise<Profile[]> {
   return (data ?? []).map((row: any) => row.following);
 }
 
-/** Get all followers of userId. */
 export async function getFollowers(userId: string): Promise<Profile[]> {
   const { data, error } = await supabase
     .from('follows')
@@ -162,7 +157,6 @@ export async function getFollowers(userId: string): Promise<Profile[]> {
   return (data ?? []).map((row: any) => row.follower);
 }
 
-/** Batch-check which profileIds the currentUser follows (for feed cards). */
 export async function getFollowingIds(userId: string): Promise<Set<string>> {
   const { data } = await supabase
     .from('follows')
@@ -172,39 +166,84 @@ export async function getFollowingIds(userId: string): Promise<Set<string>> {
 }
 
 // ─── HOOKS ─────────────────────────────────────────────────────────
+
+async function attachVotesAndSaves(
+  hooks: any[],
+  userId?: string
+): Promise<Hook[]> {
+  if (!userId || hooks.length === 0) return hooks ?? [];
+
+  const hookIds = hooks.map((h: any) => h.id);
+
+  const [{ data: votes }, { data: saves }] = await Promise.all([
+    supabase
+      .from('votes')
+      .select('hook_id, option_id')
+      .eq('user_id', userId)
+      .in('hook_id', hookIds),
+    supabase
+      .from('saved_hooks')
+      .select('hook_id')
+      .eq('user_id', userId)
+      .in('hook_id', hookIds),
+  ]);
+
+  const saveSet = new Set((saves ?? []).map((s: any) => s.hook_id));
+
+  return hooks.map((hook: any) => {
+    const vote = votes?.find((v: any) => v.hook_id === hook.id);
+    return {
+      ...hook,
+      has_voted: !!vote,
+      user_voted_option_id: vote?.option_id ?? null,
+      is_saved: saveSet.has(hook.id),
+    };
+  });
+}
+
 export async function fetchHooks(category?: string, userId?: string): Promise<Hook[]> {
+  // "Following" tab — only show hooks from users the current user follows
+  if (category === 'Following' && userId) {
+    return fetchFollowingHooks(userId);
+  }
+
   let query = supabase
     .from('hooks')
     .select(`*, creator:profiles(*), options:hook_options(*)`)
     .order('created_at', { ascending: false })
     .limit(20);
 
-  if (category && category !== 'For You') {
+  if (category && category !== 'For You' && category !== 'Following') {
     query = query.eq('category', category);
   }
 
   const { data, error } = await query;
   if (error) throw error;
 
-  if (userId && data) {
-    const hookIds = data.map((h: any) => h.id);
-    const { data: votes } = await supabase
-      .from('votes')
-      .select('hook_id, option_id')
-      .eq('user_id', userId)
-      .in('hook_id', hookIds);
+  return attachVotesAndSaves(data ?? [], userId);
+}
 
-    return data.map((hook: any) => {
-      const vote = votes?.find((v: any) => v.hook_id === hook.id);
-      return {
-        ...hook,
-        has_voted: !!vote,
-        user_voted_option_id: vote?.option_id ?? null,
-      };
-    });
-  }
+export async function fetchFollowingHooks(userId: string): Promise<Hook[]> {
+  // Get IDs of people the user follows
+  const { data: followRows } = await supabase
+    .from('follows')
+    .select('following_id')
+    .eq('follower_id', userId);
 
-  return data ?? [];
+  const followingIds = (followRows ?? []).map((r: any) => r.following_id);
+
+  if (followingIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('hooks')
+    .select(`*, creator:profiles(*), options:hook_options(*)`)
+    .in('creator_id', followingIds)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error) throw error;
+
+  return attachVotesAndSaves(data ?? [], userId);
 }
 
 export async function fetchHookById(hookId: string, userId?: string): Promise<Hook | null> {
@@ -215,16 +254,8 @@ export async function fetchHookById(hookId: string, userId?: string): Promise<Ho
     .single();
   if (error) return null;
 
-  if (userId) {
-    const { data: vote } = await supabase
-      .from('votes')
-      .select('option_id')
-      .eq('user_id', userId)
-      .eq('hook_id', hookId)
-      .maybeSingle();
-    return { ...data, has_voted: !!vote, user_voted_option_id: vote?.option_id ?? null };
-  }
-  return data;
+  const results = await attachVotesAndSaves([data], userId);
+  return results[0] ?? null;
 }
 
 export async function createHook(
@@ -258,6 +289,37 @@ export async function castVote(userId: string, hookId: string, optionId: string)
     .from('votes')
     .insert({ user_id: userId, hook_id: hookId, option_id: optionId });
   if (error) throw error;
+}
+
+// ─── SAVED HOOKS ───────────────────────────────────────────────────
+export async function saveHook(userId: string, hookId: string): Promise<void> {
+  const { error } = await supabase
+    .from('saved_hooks')
+    .insert({ user_id: userId, hook_id: hookId });
+  if (error && error.code !== '23505') throw error; // ignore duplicate
+}
+
+export async function unsaveHook(userId: string, hookId: string): Promise<void> {
+  const { error } = await supabase
+    .from('saved_hooks')
+    .delete()
+    .eq('user_id', userId)
+    .eq('hook_id', hookId);
+  if (error) throw error;
+}
+
+export async function fetchSavedHooks(userId: string): Promise<Hook[]> {
+  const { data, error } = await supabase
+    .from('saved_hooks')
+    .select(`hook:hooks(*, creator:profiles(*), options:hook_options(*))`)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+
+  const hooks = (data ?? []).map((r: any) => r.hook).filter(Boolean);
+  return attachVotesAndSaves(hooks, userId);
 }
 
 // ─── COMMENTS ──────────────────────────────────────────────────────
