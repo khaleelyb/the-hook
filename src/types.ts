@@ -5,7 +5,7 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export type Category = 'For You' | 'Trending' | 'Style' | 'Tech' | 'Lifestyle';
+export type Category = 'For You' | 'Following' | 'Trending' | 'Style' | 'Tech' | 'Lifestyle';
 
 export interface Profile {
   id: string;
@@ -41,6 +41,7 @@ export interface Hook {
   options?: HookOption[];
   has_voted?: boolean;
   user_voted_option_id?: string;
+  is_saved?: boolean;
 }
 
 export interface Comment {
