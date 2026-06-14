@@ -146,7 +146,7 @@ export default function App() {
           <div>
             {/* Category pills */}
             <div className="sticky top-14 z-40 -mx-4 px-4 py-2.5"
-              style={{ background: 'linear-gradient(to bottom, #0a0a0b 80%, transparent)' }}>
+              style={{ background: 'linear-gradient(to bottom, var(--color-background, #f5f5f7) 80%, transparent)' }}>
               <div className="flex gap-2 overflow-x-auto hide-scrollbar">
                 {categoryConfig.map(({ cat, icon, label }) => (
                   <motion.button
