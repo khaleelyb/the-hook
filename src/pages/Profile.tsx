@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Settings, BadgeCheck, BarChart3, Vote, Star, Trophy,
   Timer, CheckCircle2, Loader2, Camera, Link, Edit3,
-  Grid3X3, Bookmark, ArrowLeft, X, Save
+  Grid3X3, Bookmark, ArrowLeft, X, Save, Zap
 } from 'lucide-react';
 import type { Session } from '@supabase/supabase-js';
 import { Profile, Hook, cn } from '../types';
@@ -18,7 +18,6 @@ interface ProfilePageProps {
   onBack?: () => void;
 }
 
-// ── Edit Profile Modal ──────────────────────────────────────────────
 interface EditModalProps {
   profile: Profile;
   onClose: () => void;
@@ -36,17 +35,8 @@ const EditProfileModal: React.FC<EditModalProps> = ({ profile, onClose, onSave, 
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  const handleAvatarChange = (file: File | null) => {
-    if (!file) return;
-    setAvatarFile(file);
-    setAvatarPreview(URL.createObjectURL(file));
-  };
-
   const handleSave = async () => {
-    if (!fullName.trim() || !username.trim()) {
-      setError('Name and username are required.');
-      return;
-    }
+    if (!fullName.trim() || !username.trim()) { setError('Name and username required.'); return; }
     setSaving(true);
     setError(null);
     try {
@@ -54,17 +44,11 @@ const EditProfileModal: React.FC<EditModalProps> = ({ profile, onClose, onSave, 
       if (avatarFile) {
         avatar_url = await uploadImage(avatarFile, `avatars/${userId}-${Date.now()}`);
       }
-      const updated = await updateProfile(userId, {
-        full_name: fullName.trim(),
-        username: username.trim(),
-        bio: bio.trim(),
-        website: website.trim(),
-        avatar_url,
-      });
+      const updated = await updateProfile(userId, { full_name: fullName.trim(), username: username.trim(), bio: bio.trim(), website: website.trim(), avatar_url });
       onSave(updated);
       onClose();
     } catch (err: any) {
-      setError(err.message ?? 'Failed to save changes.');
+      setError(err.message ?? 'Failed to save.');
     } finally {
       setSaving(false);
     }
@@ -75,7 +59,7 @@ const EditProfileModal: React.FC<EditModalProps> = ({ profile, onClose, onSave, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end justify-center"
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center"
       onClick={onClose}
     >
       <motion.div
@@ -84,106 +68,87 @@ const EditProfileModal: React.FC<EditModalProps> = ({ profile, onClose, onSave, 
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 280 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-surface rounded-t-3xl overflow-hidden"
+        className="w-full max-w-lg bg-surface-container-lowest rounded-t-3xl overflow-hidden border-t border-outline-variant/30"
         style={{ maxHeight: '92vh' }}
       >
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-2">
           <div className="w-10 h-1 bg-outline-variant rounded-full" />
         </div>
-
         <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant/20">
-          <button onClick={onClose} className="p-2 text-on-surface-variant">
-            <X className="w-5 h-5" />
-          </button>
-          <h2 className="font-display text-lg font-bold text-on-surface">Edit Profile</h2>
+          <button onClick={onClose} className="p-2 text-on-surface-variant"><X className="w-5 h-5" /></button>
+          <h2 className="font-display text-base font-bold text-on-surface">Edit Profile</h2>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 px-4 py-2 bg-primary text-on-primary rounded-full text-xs font-black uppercase tracking-widest disabled:opacity-50"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white text-xs font-semibold disabled:opacity-50"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #c026d3)' }}
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
             Save
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-6 space-y-6" style={{ maxHeight: 'calc(92vh - 90px)' }}>
-          {/* Avatar picker */}
+        <div className="overflow-y-auto px-5 py-6 space-y-5" style={{ maxHeight: 'calc(92vh - 90px)' }}>
           <div className="flex flex-col items-center gap-2">
             <div className="relative">
-              <img
-                src={avatarPreview ?? profile.avatar_url ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
-                alt="Avatar"
-                className="w-24 h-24 rounded-full object-cover border-4 border-primary-container"
-              />
-              <label className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center cursor-pointer shadow-lg">
+              <div className="w-24 h-24 rounded-full p-0.5" style={{ background: 'linear-gradient(135deg, #7c3aed, #f43f5e)' }}>
+                <img
+                  src={avatarPreview ?? profile.avatar_url ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
+                  alt=""
+                  className="w-full h-full rounded-full object-cover border-2 border-background"
+                />
+              </div>
+              <label className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center cursor-pointer text-white shadow-lg" style={{ background: 'linear-gradient(135deg, #7c3aed, #c026d3)' }}>
                 <Camera className="w-4 h-4" />
-                <input type="file" accept="image/*" className="hidden"
-                  onChange={(e) => handleAvatarChange(e.target.files?.[0] ?? null)} />
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) { setAvatarFile(f); setAvatarPreview(URL.createObjectURL(f)); }
+                }} />
               </label>
             </div>
-            <p className="text-xs text-on-surface-variant font-semibold">Tap camera to change photo</p>
           </div>
 
-          {/* Text fields */}
           {[
-            { label: 'Full Name', value: fullName, set: setFullName, placeholder: 'Your display name', max: 50, type: 'text' },
-            { label: 'Username', value: username, set: setUsername, placeholder: 'username', max: 30, type: 'text' },
-          ].map(({ label, value, set, placeholder, max, type }) => (
+            { label: 'Display name', value: fullName, set: setFullName, placeholder: 'Your name', max: 50 },
+            { label: 'Username', value: username, set: setUsername, placeholder: 'username', max: 30 },
+          ].map(({ label, value, set, placeholder, max }) => (
             <div key={label} className="space-y-1.5">
-              <label className="text-[10px] font-black text-primary uppercase tracking-widest">{label}</label>
+              <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">{label}</label>
               <input
-                type={type}
-                value={value}
-                onChange={(e) => set(e.target.value)}
-                placeholder={placeholder}
-                maxLength={max}
-                className="w-full bg-surface-container rounded-xl px-4 py-3 text-sm font-medium border-none focus:ring-2 focus:ring-primary outline-none"
+                type="text" value={value} onChange={(e) => set(e.target.value)}
+                placeholder={placeholder} maxLength={max}
+                className="w-full bg-surface-container border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors"
               />
             </div>
           ))}
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest">Bio</label>
+            <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Bio</label>
             <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell the world about yourself…"
-              maxLength={150}
-              rows={3}
-              className="w-full bg-surface-container rounded-xl px-4 py-3 text-sm font-medium border-none focus:ring-2 focus:ring-primary outline-none resize-none"
+              value={bio} onChange={(e) => setBio(e.target.value)}
+              placeholder="Tell the world about yourself…" maxLength={150} rows={3}
+              className="w-full bg-surface-container border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors resize-none"
             />
             <p className="text-right text-[10px] text-on-surface-variant">{bio.length}/150</p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-primary uppercase tracking-widest flex items-center gap-1.5">
-              <Link className="w-3 h-3" /> Website
-            </label>
+            <label className="text-[10px] font-bold text-violet-400 uppercase tracking-widest flex items-center gap-1"><Link className="w-3 h-3" /> Website</label>
             <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
+              type="url" value={website} onChange={(e) => setWebsite(e.target.value)}
               placeholder="https://yoursite.com"
-              className="w-full bg-surface-container rounded-xl px-4 py-3 text-sm font-medium border-none focus:ring-2 focus:ring-primary outline-none"
+              className="w-full bg-surface-container border border-outline-variant/30 text-on-surface rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-violet-500 transition-colors"
             />
           </div>
 
-          {error && (
-            <p className="text-xs text-error font-semibold bg-error-container rounded-lg px-3 py-2">{error}</p>
-          )}
+          {error && <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2">{error}</p>}
         </div>
       </motion.div>
     </motion.div>
   );
 };
 
-// ── Main Profile Page ───────────────────────────────────────────────
-export const ProfilePage: React.FC<ProfilePageProps> = ({
-  onSettings,
-  session,
-  viewUserId,
-  onBack,
-}) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, viewUserId, onBack }) => {
   const targetId = viewUserId ?? session.user.id;
   const isOwnProfile = targetId === session.user.id;
 
@@ -210,13 +175,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }, [targetId, session.user.id, isOwnProfile]);
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
+    return <div className="flex justify-center py-24"><Loader2 className="w-8 h-8 text-violet-500 animate-spin" /></div>;
   }
-
   if (!profile) {
     return <div className="text-center py-12 text-on-surface-variant text-sm">Profile not found.</div>;
   }
@@ -224,70 +184,59 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   const totalVotes = hooks.reduce((s, h) => s + (h.total_votes ?? 0), 0);
   const liveHooks = hooks.filter((h) => new Date(h.expires_at) > new Date()).length;
   const topCat = hooks.length
-    ? Object.entries(
-        hooks.reduce((a, h) => { a[h.category] = (a[h.category] ?? 0) + 1; return a; }, {} as Record<string, number>)
-      ).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
+    ? Object.entries(hooks.reduce((a, h) => { a[h.category] = (a[h.category] ?? 0) + 1; return a; }, {} as Record<string, number>)).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—'
     : '—';
 
   return (
-    <div className="pb-12">
-      {/* Header */}
-      <div className="flex justify-between items-center h-14 sticky top-0 z-50 bg-surface/95 backdrop-blur-md border-b border-outline-variant/10 -mx-4 px-4">
+    <div className="pb-12 min-h-screen">
+      {/* Header bar */}
+      <div className="flex justify-between items-center h-14 sticky top-0 z-50 -mx-4 px-4"
+        style={{ background: 'linear-gradient(to bottom, #0a0a0b 70%, transparent)' }}>
         {onBack ? (
-          <button onClick={onBack} className="p-2 text-primary active:scale-90 transition-transform">
-            <ArrowLeft className="w-6 h-6" />
+          <button onClick={onBack} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface">
+            <ArrowLeft className="w-5 h-5" />
           </button>
         ) : (
-          <h1 className="font-display text-xl text-primary font-black italic tracking-tight">Profile</h1>
+          <div className="flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
+              <Zap className="w-3.5 h-3.5 text-white fill-white" />
+            </div>
+            <span className="font-display font-bold text-on-surface">Profile</span>
+          </div>
         )}
-        <div className="flex items-center gap-1">
-          {isOwnProfile && (
-            <>
-              <button onClick={() => setShowEdit(true)} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
-                <Edit3 className="w-5 h-5" />
-              </button>
-              <button onClick={onSettings} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
-                <Settings className="w-5 h-5" />
-              </button>
-            </>
-          )}
-        </div>
+        {isOwnProfile && (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowEdit(true)} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
+              <Edit3 className="w-4 h-4" />
+            </button>
+            <button onClick={onSettings} className="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Cover + Avatar */}
-      <div className="relative -mx-4 mb-14">
-        <div className="h-36 bg-gradient-to-br from-primary/40 via-primary-container to-secondary-container relative overflow-hidden">
-          {/* Decorative circles */}
-          <div className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-primary/10" />
-          <div className="absolute -bottom-4 left-8 w-24 h-24 rounded-full bg-secondary/10" />
-        </div>
-
-        {/* Avatar */}
-        <div className="absolute -bottom-10 left-5">
-          <div className="relative w-20 h-20 rounded-full ring-4 ring-surface overflow-hidden bg-primary-container shadow-xl">
-            <img
-              src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
-              alt={profile.username}
-              className="w-full h-full object-cover"
-            />
-          </div>
-          {profile.is_verified && (
-            <div className="absolute bottom-0 right-0 bg-primary text-white p-1 rounded-full ring-2 ring-surface">
-              <BadgeCheck className="w-3.5 h-3.5 fill-current" />
+      {/* Profile hero */}
+      <div className="px-4 pt-2 pb-6">
+        {/* Avatar row */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full p-0.5" style={{ background: 'linear-gradient(135deg, #7c3aed, #f43f5e)' }}>
+              <img
+                src={profile.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.username}`}
+                alt=""
+                className="w-full h-full rounded-full object-cover border-2 border-background"
+              />
             </div>
-          )}
-        </div>
+            {profile.is_verified && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full flex items-center justify-center border-2 border-background"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #c026d3)' }}>
+                <BadgeCheck className="w-4 h-4 text-white fill-white" />
+              </div>
+            )}
+          </div>
 
-        {/* CTA top-right */}
-        <div className="absolute bottom-[-40px] right-4">
-          {isOwnProfile ? (
-            <button
-              onClick={() => setShowEdit(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-full border-2 border-outline-variant bg-surface text-xs font-black uppercase tracking-widest active:scale-95 transition-transform"
-            >
-              <Edit3 className="w-3.5 h-3.5" /> Edit
-            </button>
-          ) : (
+          {!isOwnProfile && (
             <FollowButton
               currentUserId={session.user.id}
               targetUserId={targetId}
@@ -298,133 +247,131 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               }}
             />
           )}
+
+          {isOwnProfile && (
+            <button
+              onClick={() => setShowEdit(true)}
+              className="px-5 py-2 rounded-xl border border-outline-variant/40 text-sm font-semibold text-on-surface"
+            >
+              Edit profile
+            </button>
+          )}
+        </div>
+
+        {/* Identity */}
+        <div className="mb-4">
+          <h2 className="font-display text-xl font-bold text-on-surface leading-tight">{profile.full_name}</h2>
+          <p className="text-sm text-on-surface-variant">@{profile.username}</p>
+          {profile.bio && <p className="text-sm text-on-surface mt-2 leading-relaxed">{profile.bio}</p>}
+          {profile.website && (
+            <a href={profile.website} target="_blank" rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-violet-400 mt-1.5">
+              <Link className="w-3 h-3" />
+              {profile.website.replace(/^https?:\/\//, '')}
+            </a>
+          )}
+        </div>
+
+        {/* Stats row — Instagram-style */}
+        <div className="flex gap-6">
+          <button onClick={() => setFollowListMode('followers')} className="flex flex-col items-center">
+            <span className="font-display text-lg font-bold text-on-surface leading-none">
+              {profile.followers_count >= 1000 ? `${(profile.followers_count / 1000).toFixed(1)}k` : profile.followers_count}
+            </span>
+            <span className="text-xs text-on-surface-variant mt-0.5">Followers</span>
+          </button>
+          <button onClick={() => setFollowListMode('following')} className="flex flex-col items-center">
+            <span className="font-display text-lg font-bold text-on-surface leading-none">
+              {profile.following_count >= 1000 ? `${(profile.following_count / 1000).toFixed(1)}k` : profile.following_count}
+            </span>
+            <span className="text-xs text-on-surface-variant mt-0.5">Following</span>
+          </button>
+          <div className="flex flex-col items-center">
+            <span className="font-display text-lg font-bold text-on-surface leading-none">{hooks.length}</span>
+            <span className="text-xs text-on-surface-variant mt-0.5">Hooks</span>
+          </div>
         </div>
       </div>
 
-      {/* Identity */}
-      <div className="px-1 mb-4 space-y-0.5">
-        <h2 className="font-display text-2xl text-on-surface font-black leading-tight">{profile.full_name}</h2>
-        <p className="text-sm font-semibold text-on-surface-variant">@{profile.username}</p>
-        {profile.bio && <p className="text-sm text-on-surface leading-relaxed pt-1.5">{profile.bio}</p>}
-        {profile.website && (
-          <a
-            href={profile.website}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary pt-1"
-          >
-            <Link className="w-3 h-3" />
-            {profile.website.replace(/^https?:\/\//, '')}
-          </a>
-        )}
-      </div>
-
-      {/* Follow counts */}
-      <div className="flex gap-6 px-1 mb-6">
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-2.5 px-4 mb-1">
         {[
-          { label: 'Followers', value: profile.followers_count, action: () => setFollowListMode('followers') },
-          { label: 'Following', value: profile.following_count, action: () => setFollowListMode('following') },
-          { label: 'Hooks', value: hooks.length, action: undefined },
-        ].map(({ label, value, action }) => (
-          <button
-            key={label}
-            onClick={action}
-            disabled={!action}
-            className="flex flex-col items-start disabled:cursor-default active:scale-95 transition-transform"
-          >
-            <span className="font-display text-xl text-on-surface font-black">
-              {typeof value === 'number' && value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value}
-            </span>
-            <span className="text-xs font-semibold text-on-surface-variant">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-3 gap-2.5 mb-6">
-        {[
-          { Icon: Vote, val: totalVotes >= 1000 ? `${(totalVotes / 1000).toFixed(1)}k` : String(totalVotes), lbl: 'Total Votes', border: 'border-primary', color: 'text-primary' },
-          { Icon: BarChart3, val: String(liveHooks), lbl: 'Live Now', border: 'border-error', color: 'text-error' },
-          { Icon: Star, val: topCat, lbl: 'Top Category', border: 'border-secondary', color: 'text-secondary' },
-        ].map(({ Icon, val, lbl, border, color }) => (
-          <div key={lbl} className={cn('bg-surface-container-lowest rounded-2xl p-3 border-b-[3px] shadow-sm', border)}>
-            <Icon className={cn('w-4 h-4 mb-1.5', color)} />
-            <p className="font-display text-base text-on-surface font-black leading-none truncate">{val}</p>
-            <p className="text-[9px] font-bold text-on-surface-variant uppercase tracking-wider mt-0.5 leading-tight">{lbl}</p>
+          { icon: <Vote className="w-4 h-4 text-violet-400" />, val: totalVotes >= 1000 ? `${(totalVotes / 1000).toFixed(1)}k` : String(totalVotes), lbl: 'Votes' },
+          { icon: <div className="relative w-4 h-4"><span className="absolute inset-0 flex items-center justify-center text-rose-400"><span className="w-2 h-2 rounded-full bg-rose-500 absolute live-dot" /></span></div>, val: String(liveHooks), lbl: 'Live' },
+          { icon: <Star className="w-4 h-4 text-amber-400" />, val: topCat, lbl: 'Top' },
+        ].map(({ icon, val, lbl }) => (
+          <div key={lbl} className="bg-surface-container rounded-2xl p-3 text-center">
+            <div className="flex justify-center mb-1.5">{icon}</div>
+            <p className="font-display text-sm font-bold text-on-surface truncate">{val}</p>
+            <p className="text-[10px] text-on-surface-variant mt-0.5">{lbl}</p>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-outline-variant/30 mb-4">
-        {([['hooks', Grid3X3, 'Hooks'], ...(isOwnProfile ? [['saved', Bookmark, 'Saved']] : [])] as [string, any, string][]).map(([id, Icon, label]) => (
+      {/* Grid tabs */}
+      <div className="flex border-b border-outline-variant/20 mt-4">
+        {([['hooks', Grid3X3], ...(isOwnProfile ? [['saved', Bookmark]] : [])] as [string, any][]).map(([id, Icon]) => (
           <button
             key={id}
             onClick={() => setGridTab(id as any)}
             className={cn(
-              'flex-1 flex items-center justify-center gap-2 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all',
-              gridTab === id ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant'
+              'flex-1 flex items-center justify-center py-3 transition-all border-b-2',
+              gridTab === id ? 'border-violet-500 text-violet-400' : 'border-transparent text-on-surface-variant'
             )}
           >
-            <Icon className="w-4 h-4" />
-            {label}
+            <Icon className="w-5 h-5" />
           </button>
         ))}
       </div>
 
-      {/* Grid content */}
+      {/* Grid */}
       <AnimatePresence mode="wait">
         {gridTab === 'hooks' && (
-          <motion.div key="hooks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div key="hooks" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="px-0.5 pt-0.5">
             {hooks.length === 0 ? (
               <div className="flex flex-col items-center py-16 gap-3 text-on-surface-variant">
-                <BarChart3 className="w-10 h-10 opacity-25" />
-                <p className="text-sm font-semibold">No hooks yet.</p>
+                <BarChart3 className="w-10 h-10 opacity-20" />
+                <p className="text-sm">No hooks yet</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-0.5">
                 {hooks.map((hook, i) => {
                   const expired = new Date(hook.expires_at) < new Date();
                   const msLeft = new Date(hook.expires_at).getTime() - Date.now();
                   const hLeft = Math.max(0, Math.floor(msLeft / 3600000));
-                  const mLeft = Math.max(0, Math.floor((msLeft % 3600000) / 60000));
-
                   return (
                     <motion.div
                       key={hook.id}
-                      whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
-                      className="relative aspect-square rounded-2xl overflow-hidden bg-surface-container cursor-pointer shadow-sm"
+                      className="relative aspect-square overflow-hidden cursor-pointer bg-surface-container"
                     >
                       {hook.options?.[0]?.image_url ? (
                         <img src={hook.options[0].image_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-container-high p-4">
-                          <p className="text-xs font-bold text-on-surface text-center line-clamp-4 leading-snug">{hook.question}</p>
+                        <div className="w-full h-full flex items-center justify-center p-2" style={{ background: 'linear-gradient(135deg, #2d1b69, #1c0a2e)' }}>
+                          <p className="text-[10px] font-semibold text-violet-300 text-center line-clamp-3 leading-tight">{hook.question}</p>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
-                      <div className="absolute top-2 left-2">
-                        {i === 0 && hooks.length > 1 ? (
-                          <span className="bg-amber-500 text-white flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black">
-                            <Trophy className="w-3 h-3 fill-current" /> Top
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      {/* Badge */}
+                      <div className="absolute top-1.5 left-1.5">
+                        {i === 0 ? (
+                          <span className="bg-amber-500 text-white rounded-md px-1.5 py-0.5 text-[9px] font-bold flex items-center gap-0.5">
+                            <Trophy className="w-2.5 h-2.5" /> Top
                           </span>
                         ) : !expired ? (
-                          <span className="bg-error text-white flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black animate-pulse">
-                            <Timer className="w-3 h-3" /> {hLeft}h {mLeft}m
+                          <span className="bg-rose-600 text-white rounded-md px-1.5 py-0.5 text-[9px] font-bold flex items-center gap-0.5">
+                            <Timer className="w-2.5 h-2.5" /> {hLeft}h
                           </span>
                         ) : (
-                          <span className="bg-black/40 text-white flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold">
-                            <CheckCircle2 className="w-3 h-3" /> Done
+                          <span className="bg-black/50 text-white/70 rounded-md px-1.5 py-0.5 text-[9px] font-bold flex items-center gap-0.5">
+                            <CheckCircle2 className="w-2.5 h-2.5" /> Done
                           </span>
                         )}
                       </div>
-                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-                        <p className="text-white text-[10px] font-black">
-                          {hook.total_votes >= 1000 ? `${(hook.total_votes / 1000).toFixed(1)}k` : hook.total_votes} votes
-                        </p>
-                        <span className="bg-white/20 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          {hook.category}
+                      <div className="absolute bottom-1.5 left-1.5">
+                        <span className="text-white text-[9px] font-bold">
+                          {hook.total_votes >= 1000 ? `${(hook.total_votes / 1000).toFixed(1)}k` : hook.total_votes}
                         </span>
                       </div>
                     </motion.div>
@@ -434,36 +381,22 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             )}
           </motion.div>
         )}
-
         {gridTab === 'saved' && (
           <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="flex flex-col items-center py-16 gap-3 text-on-surface-variant"
-          >
-            <Bookmark className="w-10 h-10 opacity-25" />
-            <p className="text-sm font-semibold">Saved hooks coming soon.</p>
+            className="flex flex-col items-center py-16 gap-3 text-on-surface-variant">
+            <Bookmark className="w-10 h-10 opacity-20" />
+            <p className="text-sm">Saved hooks coming soon</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Follow list sheet */}
       {followListMode && (
-        <FollowList
-          userId={targetId}
-          currentUserId={session.user.id}
-          mode={followListMode}
-          onClose={() => setFollowListMode(null)}
-        />
+        <FollowList userId={targetId} currentUserId={session.user.id} mode={followListMode} onClose={() => setFollowListMode(null)} />
       )}
 
-      {/* Edit modal */}
       <AnimatePresence>
         {showEdit && (
-          <EditProfileModal
-            profile={profile}
-            userId={session.user.id}
-            onClose={() => setShowEdit(false)}
-            onSave={(updated) => setProfile(updated)}
-          />
+          <EditProfileModal profile={profile} userId={session.user.id} onClose={() => setShowEdit(false)} onSave={(u) => setProfile(u)} />
         )}
       </AnimatePresence>
     </div>
