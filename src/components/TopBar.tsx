@@ -1,21 +1,32 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Bolt, Bell } from 'lucide-react';
+import { Bell, Zap } from 'lucide-react';
 
-export const TopBar: React.FC<{ title?: string; onSettings?: () => void }> = ({ title = "THE HOOK" }) => {
+export const TopBar: React.FC<{ title?: string; onSettings?: () => void }> = ({ title = "HOOK" }) => {
+  const [hasNotif] = React.useState(true);
+
   return (
-    <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-surface shadow-sm transition-all duration-300">
-      <div className="flex items-center gap-2 cursor-pointer active:scale-95 transition-transform duration-150">
-        <Bolt className="w-6 h-6 text-primary fill-primary" />
-        <h1 className="font-display text-2xl italic font-black tracking-tighter text-primary">
+    <header className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-5 h-14"
+      style={{ background: 'linear-gradient(to bottom, #0a0a0b 60%, transparent)' }}>
+      {/* Logo */}
+      <div className="flex items-center gap-1.5">
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
+          <Zap className="w-4 h-4 text-white fill-white" />
+        </div>
+        <span className="font-display text-xl font-bold tracking-tight text-white">
           {title}
-        </h1>
+        </span>
       </div>
-      <motion.button 
-        whileTap={{ scale: 0.9 }}
-        className="p-2 text-on-surface-variant hover:opacity-80 transition-opacity"
+
+      {/* Notif bell */}
+      <motion.button
+        whileTap={{ scale: 0.88 }}
+        className="relative w-9 h-9 flex items-center justify-center rounded-full bg-surface-container"
       >
-        <Bell className="w-6 h-6" />
+        <Bell className="w-5 h-5 text-on-surface" strokeWidth={1.8} />
+        {hasNotif && (
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-secondary rounded-full ring-2 ring-background" />
+        )}
       </motion.button>
     </header>
   );
