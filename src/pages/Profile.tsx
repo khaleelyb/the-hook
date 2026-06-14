@@ -16,6 +16,7 @@ interface ProfilePageProps {
   session: Session;
   viewUserId?: string;
   onBack?: () => void;
+  onHookClick?: (hookId: string) => void;
 }
 
 interface EditModalProps {
@@ -149,7 +150,7 @@ const EditProfileModal: React.FC<EditModalProps> = ({ profile, onClose, onSave, 
 };
 
 // ── Mini Hook card for grid ────────────────────────────────────────
-const HookGridItem: React.FC<{ hook: Hook; index: number }> = ({ hook, index }) => {
+const HookGridItem: React.FC<{ hook: Hook; index: number; onClick?: () => void }> = ({ hook, index, onClick }) => {
   const expired = new Date(hook.expires_at) < new Date();
   const msLeft = new Date(hook.expires_at).getTime() - Date.now();
   const hLeft = Math.max(0, Math.floor(msLeft / 3600000));
@@ -157,6 +158,7 @@ const HookGridItem: React.FC<{ hook: Hook; index: number }> = ({ hook, index }) 
   return (
     <motion.div
       whileTap={{ scale: 0.97 }}
+      onClick={onClick}
       className="relative aspect-square overflow-hidden cursor-pointer bg-surface-container"
     >
       {hook.options?.[0]?.image_url ? (
@@ -191,7 +193,7 @@ const HookGridItem: React.FC<{ hook: Hook; index: number }> = ({ hook, index }) 
   );
 };
 
-export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, viewUserId, onBack }) => {
+export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, viewUserId, onBack, onHookClick }) => {
   const targetId = viewUserId ?? session.user.id;
   const isOwnProfile = targetId === session.user.id;
 
@@ -219,7 +221,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
     });
   }, [targetId, session.user.id, isOwnProfile]);
 
-  // Lazy-load saved hooks when tab is selected
   React.useEffect(() => {
     if (gridTab !== 'saved' || !isOwnProfile) return;
     setLoadingSaved(true);
@@ -311,7 +312,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
           )}
         </div>
 
-        {/* Identity */}
         <div className="mb-4">
           <h2 className="font-display text-xl font-bold text-on-surface leading-tight">{profile.full_name}</h2>
           <p className="text-sm text-on-surface-variant">@{profile.username}</p>
@@ -325,7 +325,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
           )}
         </div>
 
-        {/* Stats row */}
         <div className="flex gap-6">
           <button onClick={() => setFollowListMode('followers')} className="flex flex-col items-center">
             <span className="font-display text-lg font-bold text-on-surface leading-none">
@@ -386,13 +385,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
                 <BarChart3 className="w-10 h-10 opacity-20" />
                 <p className="text-sm font-semibold text-on-surface">No hooks yet</p>
                 <p className="text-xs text-on-surface-variant">
-                  {isOwnProfile ? 'Create your first hook to get the debate started.' : 'This user hasn\'t posted any hooks yet.'}
+                  {isOwnProfile ? 'Create your first hook to get the debate started.' : "This user hasn't posted any hooks yet."}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-3 gap-0.5">
                 {hooks.map((hook, i) => (
-                  <HookGridItem key={hook.id} hook={hook} index={i} />
+                  <HookGridItem
+                    key={hook.id}
+                    hook={hook}
+                    index={i}
+                    onClick={() => onHookClick?.(hook.id)}
+                  />
                 ))}
               </div>
             )}
@@ -418,7 +422,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ onSettings, session, v
             ) : (
               <div className="grid grid-cols-3 gap-0.5">
                 {savedHooks.map((hook, i) => (
-                  <HookGridItem key={hook.id} hook={hook} index={i} />
+                  <HookGridItem
+                    key={hook.id}
+                    hook={hook}
+                    index={i}
+                    onClick={() => onHookClick?.(hook.id)}
+                  />
                 ))}
               </div>
             )}
