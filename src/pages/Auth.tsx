@@ -29,12 +29,14 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Gradient blob bg */}
+      {/* Soft gradient blobs */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-20 w-96 h-96 rounded-full opacity-20"
+        <div className="absolute -top-40 -left-20 w-96 h-96 rounded-full opacity-15"
           style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }} />
-        <div className="absolute top-20 -right-20 w-72 h-72 rounded-full opacity-15"
-          style={{ background: 'radial-gradient(circle, #f43f5e 0%, transparent 70%)' }} />
+        <div className="absolute top-20 -right-20 w-72 h-72 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #e11d48 0%, transparent 70%)' }} />
+        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-80 h-80 rounded-full opacity-10"
+          style={{ background: 'radial-gradient(circle, #6d28d9 0%, transparent 70%)' }} />
       </div>
 
       <div className="relative flex flex-col flex-1 items-center justify-center px-6 py-12">
@@ -45,10 +47,10 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           className="text-center mb-10"
         >
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center mx-auto mb-4 shadow-lg"
-            style={{ boxShadow: '0 0 40px rgba(124, 58, 237, 0.4)' }}>
+            style={{ boxShadow: '0 0 40px rgba(109, 40, 217, 0.3)' }}>
             <Zap className="w-9 h-9 text-white fill-white" />
           </div>
-          <h1 className="font-display text-4xl font-bold text-white tracking-tight">The Hook</h1>
+          <h1 className="font-display text-4xl font-bold text-on-surface tracking-tight">The Hook</h1>
           <p className="text-on-surface-variant text-sm mt-1.5">Vote on what matters. Decide everything.</p>
         </motion.div>
 
@@ -60,14 +62,16 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
           className="w-full max-w-sm"
         >
           {/* Mode toggle */}
-          <div className="flex rounded-2xl overflow-hidden bg-surface-container p-1 mb-6">
+          <div className="flex rounded-2xl overflow-hidden bg-surface-container p-1 mb-6 shadow-sm">
             {(['login', 'signup'] as const).map((m) => (
               <motion.button
                 key={m}
                 onClick={() => { setMode(m); setError(null); }}
                 className={cn(
                   'flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all',
-                  mode === m ? 'bg-surface-container-highest text-white shadow-sm' : 'text-on-surface-variant'
+                  mode === m
+                    ? 'bg-white text-on-surface shadow-sm'
+                    : 'text-on-surface-variant'
                 )}
               >
                 {m === 'login' ? 'Log in' : 'Sign up'}
@@ -91,7 +95,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                       placeholder="Username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-surface-container border border-outline-variant/30 text-on-surface pl-10 pr-4 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-violet-500 focus:bg-surface-container-high transition-all"
+                      className="w-full bg-white border border-outline-variant text-on-surface pl-10 pr-4 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
                     />
                   </div>
                 </motion.div>
@@ -105,7 +109,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                 placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-surface-container border border-outline-variant/30 text-on-surface pl-10 pr-4 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-violet-500 focus:bg-surface-container-high transition-all"
+                className="w-full bg-white border border-outline-variant text-on-surface pl-10 pr-4 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
               />
             </div>
 
@@ -117,7 +121,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                className="w-full bg-surface-container border border-outline-variant/30 text-on-surface pl-10 pr-12 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-violet-500 focus:bg-surface-container-high transition-all"
+                className="w-full bg-white border border-outline-variant text-on-surface pl-10 pr-12 py-3.5 rounded-xl text-sm placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm"
               />
               <button
                 type="button"
@@ -134,7 +138,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  className="text-xs text-rose-400 font-medium bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2"
+                  className="text-xs text-rose-600 font-medium bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"
                 >
                   {error}
                 </motion.p>
@@ -146,7 +150,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
               onClick={handleSubmit}
               disabled={loading}
               className="w-full py-4 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60 transition-all mt-2"
-              style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #c026d3 100%)', boxShadow: '0 4px 20px rgba(124, 58, 237, 0.35)' }}
+              style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #c026d3 100%)', boxShadow: '0 4px 20px rgba(109, 40, 217, 0.3)' }}
             >
               {loading
                 ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -160,7 +164,7 @@ export const AuthPage: React.FC<{ onAuth: () => void }> = ({ onAuth }) => {
 
           <p className="text-center text-xs text-on-surface-variant mt-6">
             {mode === 'login' ? "Don't have an account? " : "Already have an account? "}
-            <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-violet-400 font-semibold">
+            <button onClick={() => setMode(mode === 'login' ? 'signup' : 'login')} className="text-primary font-semibold">
               {mode === 'login' ? 'Sign up' : 'Log in'}
             </button>
           </p>
